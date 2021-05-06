@@ -68,8 +68,8 @@ func (store *substore) delete(key string) {
 	delete(store.kvmap, key)
 }
 
-func (store *substore) reap(results bool) []string {
-	var deleted []string
+func (store *substore) reap(results bool) map[string]interface{} {
+	resMap := make(map[string]interface{})
 	now := getTimeCoarse()
 
 	store.Lock()
@@ -82,11 +82,11 @@ func (store *substore) reap(results bool) []string {
 
 		delete(store.kvmap, k)
 		if results {
-			deleted = append(deleted, k)
+			resMap[k] = v.val
 		}
 	}
 
-	return deleted
+	return resMap
 }
 
 func (store *substore) keys() []string {

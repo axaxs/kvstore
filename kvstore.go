@@ -23,8 +23,8 @@ var (
 // KVStore is our primary key-value store.  It is a parent container/controller used for all operations
 // Do not use the empty value of this struct, it will panic.  Use NewKVStore()
 type KVStore struct {
-	sema     *semaphore.Semaphore
-	reapLock sync.Mutex
+	sema      *semaphore.Semaphore
+	reapLock  sync.Mutex
 	stores    map[uint32]*substore
 	numStores uint32
 }
@@ -76,13 +76,17 @@ func (kvs *KVStore) Delete(key string) {
 
 // Reap stops the world to scan the entire map and evicts expired things.
 // results is whether or not to collect deleted keys for return
-// If results is false, the returned slice will always be nil
+// If results is false, the returned map will always be nil
 // It does not run automatically, and is meant to be user implementable.
-func (kvs *KVStore) Reap(results bool) []string {
+func (kvs *KVStore) Reap(results bool) map[string]interface{} {
 	kvs.reapLock.Lock()
 	defer kvs.reapLock.Unlock()
 
-	var totalDeleted []string
+	var totalDeleted map[string]interface{}
+	if results {
+		totalDeleted = make(map[string]interface{})
+	}
+
 	var reapMut sync.Mutex
 
 	for _, store := range kvs.stores {
@@ -92,7 +96,9 @@ func (kvs *KVStore) Reap(results bool) []string {
 			deleted := s.reap(results)
 			if results {
 				reapMut.Lock()
-				totalDeleted = append(totalDeleted, deleted...)
+				for k, v := range deleted {
+					totalDeleted[k] = v
+				}
 				reapMut.Unlock()
 			}
 		}(store)
